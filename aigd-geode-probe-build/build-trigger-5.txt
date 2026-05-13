@@ -1,0 +1,1 @@
+Fresh normal PR trigger with workflow patching original source bundle after extraction.
