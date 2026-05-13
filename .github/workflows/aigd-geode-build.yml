@@ -23,26 +23,14 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Path work -Force | Out-Null
-          $chunkDir = "aigd-geode-probe-build/source-chunks"
           $bundle = "aigd-geode-probe-build/input-source.tar.gz.b64"
-          if (Test-Path $chunkDir) {
-            Write-Host "Using chunked raw source bundle: $chunkDir"
-            $clean = ""
-            Get-ChildItem $chunkDir -Filter "*.b64" | Sort-Object Name | ForEach-Object {
-              Write-Host "Reading chunk $($_.Name)"
-              $clean += (Get-Content -Raw $_.FullName) -replace "\s", ""
-            }
-            [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
+          if (!(Test-Path $bundle)) {
+            throw "Missing source bundle: $bundle"
           }
-          elseif (Test-Path $bundle) {
-            Write-Host "Using raw source bundle: $bundle"
-            $b64 = Get-Content -Raw $bundle
-            $clean = $b64 -replace "\s", ""
-            [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
-          }
-          else {
-            throw "Missing source bundle: $bundle or $chunkDir/*.b64"
-          }
+          Write-Host "Using raw source bundle: $bundle"
+          $b64 = Get-Content -Raw $bundle
+          $clean = $b64 -replace "\s", ""
+          [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           tar -xzf "work/source.tar.gz" -C "work"
           if (!(Test-Path "work/aigd-geode-probe/CMakeLists.txt")) {
             throw "Extracted bundle did not contain work/aigd-geode-probe/CMakeLists.txt"
