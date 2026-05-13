@@ -33,7 +33,12 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path work -Force | Out-Null
-          $b64 = Get-Content -Raw "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
+          $bundle = "aigd-geode-probe-build/aigd-geode-probe-source-cmakefix.tar.gz.b64"
+          if (!(Test-Path $bundle)) {
+            $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
+          }
+          Write-Host "Using source bundle: $bundle"
+          $b64 = Get-Content -Raw $bundle
           $clean = $b64 -replace "\s", ""
           [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           tar -xzf "work/source.tar.gz" -C "work"
