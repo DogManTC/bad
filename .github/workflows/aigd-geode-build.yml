@@ -27,14 +27,25 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Path work -Force | Out-Null
-          $bundle = "aigd-geode-probe-build/aigd-geode-probe-source-alpha021.tar.gz.b64"
-          if (!(Test-Path $bundle)) {
-            $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
+          $chunkDir = "aigd-geode-probe-build/source-chunks"
+          if (Test-Path $chunkDir) {
+            Write-Host "Using chunked raw source bundle: $chunkDir"
+            $clean = ""
+            Get-ChildItem $chunkDir -Filter "*.b64" | Sort-Object Name | ForEach-Object {
+              $clean += (Get-Content -Raw $_.FullName) -replace "\s", ""
+            }
+            [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           }
-          Write-Host "Using raw source bundle: $bundle"
-          $b64 = Get-Content -Raw $bundle
-          $clean = $b64 -replace "\s", ""
-          [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
+          else {
+            $bundle = "aigd-geode-probe-build/aigd-geode-probe-source-alpha021.tar.gz.b64"
+            if (!(Test-Path $bundle)) {
+              $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
+            }
+            Write-Host "Using raw source bundle: $bundle"
+            $b64 = Get-Content -Raw $bundle
+            $clean = $b64 -replace "\s", ""
+            [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
+          }
           tar -xzf "work/source.tar.gz" -C "work"
 
       - name: Standardize source for reproducible Geode build
