@@ -13,7 +13,7 @@ on:
 
 jobs:
   build-win64:
-    name: Build Win64 .geode
+    name: Build Win64 .geode from raw source bundle
     runs-on: windows-latest
     permissions:
       contents: read
@@ -22,31 +22,27 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Extract and patch uploaded source bundle
+      - name: Extract raw source bundle
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Path work -Force | Out-Null
           $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
-          Write-Host "Using source bundle: $bundle"
+          Write-Host "Using raw source bundle: $bundle"
           $b64 = Get-Content -Raw $bundle
           $clean = $b64 -replace "\s", ""
           [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           tar -xzf "work/source.tar.gz" -C "work"
 
-          $cmake = "work/aigd-geode-probe/CMakeLists.txt"
-          $cmakeText = Get-Content -Raw $cmake
-          $cmakeText = $cmakeText.Replace(" PRIVATE ws2_32", " ws2_32")
-          $cmakeText = $cmakeText.Replace("AIGD_GEODE_PROBE_WINDOWS=1)", "AIGD_GEODE_PROBE_WINDOWS=1 WIN32_LEAN_AND_MEAN NOMINMAX)")
-          Set-Content -NoNewline -Path $cmake -Value $cmakeText
-          Write-Host "Patched CMakeLists for link signature and Windows headers."
-
-          $modJson = "work/aigd-geode-probe/mod.json"
-          $modText = Get-Content -Raw $modJson
-          $modText = $modText.Replace('"geode": "$GEODE_VERSION"', '"geode": "5.7.1"')
-          Set-Content -NoNewline -Path $modJson -Value $modText
-          Write-Host "Patched mod.json Geode version."
-          Get-Content $modJson
-          Get-ChildItem -Recurse "work/aigd-geode-probe" | Select-Object -First 50
+      - name: Standardize source for reproducible Geode build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          ./aigd-geode-probe-build/standardize-aigd-source.ps1 -SourceDir "work/aigd-geode-probe" -GeodeVersion "5.7.1"
+          Write-Host "--- normalized mod.json ---"
+          Get-Content "work/aigd-geode-probe/mod.json"
+          Write-Host "--- normalized CMakeLists.txt ---"
+          Get-Content "work/aigd-geode-probe/CMakeLists.txt"
 
       - name: Build Geode mod
         id: build
@@ -54,7 +50,7 @@ jobs:
         with:
           path: work/aigd-geode-probe
           target: Win64
-          sdk: latest
+          sdk: given
           cli: latest
           build-config: RelWithDebInfo
           export-pdb: true
@@ -70,4 +66,4 @@ jobs:
             work/aigd-geode-probe/build/**/*.dll
             work/aigd-geode-probe/build/**/*.pdb
             work/aigd-geode-probe/build/**/*.log
-          if-no-files-found: warn
+          if-no-files-found: error
