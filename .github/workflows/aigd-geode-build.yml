@@ -35,6 +35,8 @@ jobs:
         with:
           path: work/aigd-geode-probe
           target: Win64
+          sdk: latest
+          cli: latest
           build-config: RelWithDebInfo
           export-pdb: true
 
