@@ -37,9 +37,11 @@ else {
     $cmakeText = $cmakeText.TrimEnd() + "`n`n" + $windowsBlock + "`n"
 }
 
-# Geode's CMake helpers use the plain target_link_libraries signature,
-# so the project must not mix in the keyword signature for ws2_32.
+# Geode's CMake helper uses the plain target_link_libraries signature, so avoid
+# mixing in the keyword form for ws2_32.
+$cmakeText = $cmakeText.Replace("target_link_libraries(`${PROJECT_NAME} PRIVATE ws2_32)", "target_link_libraries(`${PROJECT_NAME} ws2_32)")
 $cmakeText = $cmakeText.Replace("target_link_libraries(`$`{PROJECT_NAME`} PRIVATE ws2_32)", "target_link_libraries(`$`{PROJECT_NAME`} ws2_32)")
+$cmakeText = $cmakeText.Replace(" PRIVATE ws2_32", " ws2_32")
 
 Set-Content -NoNewline -Path $cmakePath -Value $cmakeText
 
