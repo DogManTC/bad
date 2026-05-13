@@ -10,11 +10,6 @@ on:
     paths:
       - "aigd-geode-probe-build/**"
       - ".github/workflows/aigd-geode-build.yml"
-  pull_request_target:
-    types: [opened, synchronize, reopened]
-    paths:
-      - "aigd-geode-probe-build/**"
-      - ".github/workflows/aigd-geode-build.yml"
 
 jobs:
   build-win64:
@@ -26,22 +21,23 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Extract uploaded source bundle
+      - name: Extract and patch uploaded source bundle
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path work -Force | Out-Null
-          $bundle = "aigd-geode-probe-build/aigd-geode-probe-source-cmakefix.tar.gz.b64"
-          if (!(Test-Path $bundle)) {
-            $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
-          }
+          $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
           Write-Host "Using source bundle: $bundle"
           $b64 = Get-Content -Raw $bundle
           $clean = $b64 -replace "\s", ""
           [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           tar -xzf "work/source.tar.gz" -C "work"
+          $cmake = "work/aigd-geode-probe/CMakeLists.txt"
+          $text = Get-Content -Raw $cmake
+          $text = $text.Replace(" PRIVATE ws2_32", " ws2_32")
+          Set-Content -NoNewline -Path $cmake -Value $text
+          Write-Host "Patched CMakeLists target_link_libraries signature."
+          Get-Content $cmake
           Get-ChildItem -Recurse "work/aigd-geode-probe" | Select-Object -First 50
 
       - name: Build Geode mod
