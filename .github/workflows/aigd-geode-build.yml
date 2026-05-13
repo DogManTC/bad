@@ -32,12 +32,19 @@ jobs:
           $clean = $b64 -replace "\s", ""
           [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           tar -xzf "work/source.tar.gz" -C "work"
+
           $cmake = "work/aigd-geode-probe/CMakeLists.txt"
-          $text = Get-Content -Raw $cmake
-          $text = $text.Replace(" PRIVATE ws2_32", " ws2_32")
-          Set-Content -NoNewline -Path $cmake -Value $text
+          $cmakeText = Get-Content -Raw $cmake
+          $cmakeText = $cmakeText.Replace(" PRIVATE ws2_32", " ws2_32")
+          Set-Content -NoNewline -Path $cmake -Value $cmakeText
           Write-Host "Patched CMakeLists target_link_libraries signature."
-          Get-Content $cmake
+
+          $modJson = "work/aigd-geode-probe/mod.json"
+          $modText = Get-Content -Raw $modJson
+          $modText = $modText.Replace('"geode": "$GEODE_VERSION"', '"geode": "5.7.1"')
+          Set-Content -NoNewline -Path $modJson -Value $modText
+          Write-Host "Patched mod.json Geode version."
+          Get-Content $modJson
           Get-ChildItem -Recurse "work/aigd-geode-probe" | Select-Object -First 50
 
       - name: Build Geode mod
