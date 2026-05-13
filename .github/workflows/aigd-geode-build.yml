@@ -36,8 +36,9 @@ jobs:
           $cmake = "work/aigd-geode-probe/CMakeLists.txt"
           $cmakeText = Get-Content -Raw $cmake
           $cmakeText = $cmakeText.Replace(" PRIVATE ws2_32", " ws2_32")
+          $cmakeText = $cmakeText.Replace("AIGD_GEODE_PROBE_WINDOWS=1)", "AIGD_GEODE_PROBE_WINDOWS=1 WIN32_LEAN_AND_MEAN NOMINMAX)")
           Set-Content -NoNewline -Path $cmake -Value $cmakeText
-          Write-Host "Patched CMakeLists target_link_libraries signature."
+          Write-Host "Patched CMakeLists for link signature and Windows headers."
 
           $modJson = "work/aigd-geode-probe/mod.json"
           $modText = Get-Content -Raw $modJson
