@@ -1,0 +1,48 @@
+name: Build AiGD Geode Probe
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "aigd-geode-probe-build/**"
+      - ".github/workflows/aigd-geode-build.yml"
+
+jobs:
+  build-win64:
+    name: Build Win64 .geode
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract uploaded source bundle
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path work -Force | Out-Null
+          $b64 = Get-Content -Raw "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
+          $clean = $b64 -replace "\s", ""
+          [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
+          tar -xzf "work/source.tar.gz" -C "work"
+          Get-ChildItem -Recurse "work/aigd-geode-probe" | Select-Object -First 50
+
+      - name: Build Geode mod
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          path: work/aigd-geode-probe
+          target: Win64
+          build-config: RelWithDebInfo
+          export-pdb: true
+
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: aigd-geode-probe-win64
+          path: |
+            ${{ steps.build.outputs.build-output }}
+            work/aigd-geode-probe/build/**/*.geode
+            work/aigd-geode-probe/build/**/*.dll
+            work/aigd-geode-probe/build/**/*.pdb
+            work/aigd-geode-probe/build/**/*.log
+          if-no-files-found: warn
