@@ -6,6 +6,10 @@ on:
     paths:
       - "aigd-geode-probe-build/**"
       - ".github/workflows/aigd-geode-build.yml"
+  pull_request:
+    paths:
+      - "aigd-geode-probe-build/**"
+      - ".github/workflows/aigd-geode-build.yml"
 
 jobs:
   build-win64:
