@@ -2,10 +2,6 @@ name: Build AiGD Geode Probe
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - "aigd-geode-probe-build/**"
-      - ".github/workflows/aigd-geode-build.yml"
   pull_request:
     paths:
       - "aigd-geode-probe-build/**"
@@ -27,32 +23,32 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           New-Item -ItemType Directory -Path work -Force | Out-Null
-          $chunkDir = "aigd-geode-probe-build/source-chunks"
-          if (Test-Path $chunkDir) {
-            Write-Host "Using chunked raw source bundle: $chunkDir"
-            $clean = ""
-            Get-ChildItem $chunkDir -Filter "*.b64" | Sort-Object Name | ForEach-Object {
-              $clean += (Get-Content -Raw $_.FullName) -replace "\s", ""
-            }
-            [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
+          $bundle = "aigd-geode-probe-build/input-source.tar.gz.b64"
+          if (!(Test-Path $bundle)) {
+            throw "Missing source bundle: $bundle"
           }
-          else {
-            $bundle = "aigd-geode-probe-build/aigd-geode-probe-source-alpha021.tar.gz.b64"
-            if (!(Test-Path $bundle)) {
-              $bundle = "aigd-geode-probe-build/aigd-geode-probe-source.tar.gz.b64"
-            }
-            Write-Host "Using raw source bundle: $bundle"
-            $b64 = Get-Content -Raw $bundle
-            $clean = $b64 -replace "\s", ""
-            [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
-          }
+          Write-Host "Using raw source bundle: $bundle"
+          $b64 = Get-Content -Raw $bundle
+          $clean = $b64 -replace "\s", ""
+          [IO.File]::WriteAllBytes("work/source.tar.gz", [Convert]::FromBase64String($clean))
           tar -xzf "work/source.tar.gz" -C "work"
+          if (!(Test-Path "work/aigd-geode-probe/CMakeLists.txt")) {
+            throw "Extracted bundle did not contain work/aigd-geode-probe/CMakeLists.txt"
+          }
+          if (!(Test-Path "work/aigd-geode-probe/mod.json")) {
+            throw "Extracted bundle did not contain work/aigd-geode-probe/mod.json"
+          }
 
       - name: Standardize source for reproducible Geode build
         shell: pwsh
         run: |
           $ErrorActionPreference = "Stop"
-          ./aigd-geode-probe-build/standardize-aigd-source.ps1 -SourceDir "work/aigd-geode-probe" -GeodeVersion "5.7.1"
+          $versionFile = "aigd-geode-probe-build/geode-version.txt"
+          $geodeVersion = "5.7.1"
+          if (Test-Path $versionFile) {
+            $geodeVersion = (Get-Content -Raw $versionFile).Trim()
+          }
+          ./aigd-geode-probe-build/standardize-aigd-source.ps1 -SourceDir "work/aigd-geode-probe" -GeodeVersion $geodeVersion
           Write-Host "--- normalized mod.json ---"
           Get-Content "work/aigd-geode-probe/mod.json"
           Write-Host "--- normalized CMakeLists.txt ---"
